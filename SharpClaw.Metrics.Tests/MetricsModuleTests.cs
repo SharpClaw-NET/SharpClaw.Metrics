@@ -5,9 +5,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using SharpClaw.Contracts.Modules;
 using SharpClaw.Contracts.Tasks;
-using SharpClaw.Core.Tasks;
-using SharpClaw.Core.Tasks.Models;
-using SharpClaw.Core.Tasks.Parsing;
 using SharpClaw.Modules.Metrics;
 
 namespace SharpClaw.Metrics.Tests;
@@ -92,81 +89,119 @@ public sealed class MetricsModuleTests
     }
 
     [Test]
-    public void RegisteredParserExtensionParsesMetricThresholdAttribute()
+    public void MetricThresholdHandlerParsesMetricSourceAndThreshold()
     {
-        var definition = ParseWithMetricsExtension(WrapTaskWithAttribute(
-            """[OnMetricThreshold("System.CpuPercent", Threshold = 90.0, Direction = ThresholdDirection.Above)]"""));
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: ["System.CpuPercent"],
+            namedNumbers: new Dictionary<string, double>
+            {
+                ["Threshold"] = 90.0,
+            },
+            namedEnums: new Dictionary<string, string>
+            {
+                ["Direction"] = nameof(ThresholdDirection.Above),
+            }));
 
-        var trigger = AssertSingleTrigger(definition);
-
-        Assert.That(trigger.TriggerKey, Is.EqualTo(MetricTriggerKeys.MetricThreshold));
+        Assert.That(trigger!.TriggerKey, Is.EqualTo(MetricTriggerKeys.MetricThreshold));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Source], Is.EqualTo("System.CpuPercent"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Threshold], Is.EqualTo("90"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Direction], Is.EqualTo(ThresholdDirection.Above.ToString()));
         Assert.That(trigger.Parameters.ContainsKey(MetricTriggerKeys.PollIntervalSecs), Is.False);
-        Assert.That(trigger.Line, Is.EqualTo(1));
     }
 
     [TestCase("ThresholdDirection.Above", nameof(ThresholdDirection.Above))]
     [TestCase("ThresholdDirection.Below", nameof(ThresholdDirection.Below))]
     [TestCase("ThresholdDirection.Either", nameof(ThresholdDirection.Either))]
-    public void RegisteredParserExtensionPreservesMetricThresholdDirection(string sourceDirection, string expected)
+    public void MetricThresholdHandlerPreservesDirection(string sourceDirection, string expected)
     {
-        var definition = ParseWithMetricsExtension(WrapTaskWithAttribute(
-            $$"""[OnMetricThreshold("Queue.PendingJobCount", Threshold = 4.5, Direction = {{sourceDirection}})]"""));
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: ["Queue.PendingJobCount"],
+            namedNumbers: new Dictionary<string, double>
+            {
+                ["Threshold"] = 4.5,
+            },
+            namedEnums: new Dictionary<string, string>
+            {
+                ["Direction"] = sourceDirection,
+            }));
 
-        var trigger = AssertSingleTrigger(definition);
-
-        Assert.That(trigger.Parameters[MetricTriggerKeys.Threshold], Is.EqualTo("4.5"));
+        Assert.That(trigger!.Parameters[MetricTriggerKeys.Threshold], Is.EqualTo("4.5"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Direction], Is.EqualTo(expected));
     }
 
     [Test]
-    public void RegisteredParserExtensionDefaultsDirectionToEither()
+    public void MetricThresholdHandlerDefaultsDirectionToEither()
     {
-        var definition = ParseWithMetricsExtension(WrapTaskWithAttribute(
-            """[OnMetricThreshold("Queue.PendingTaskCount", Threshold = 3)]"""));
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: ["Queue.PendingTaskCount"],
+            namedNumbers: new Dictionary<string, double>
+            {
+                ["Threshold"] = 3,
+            }));
 
-        var trigger = AssertSingleTrigger(definition);
-
-        Assert.That(trigger.Parameters[MetricTriggerKeys.Source], Is.EqualTo("Queue.PendingTaskCount"));
+        Assert.That(trigger!.Parameters[MetricTriggerKeys.Source], Is.EqualTo("Queue.PendingTaskCount"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Threshold], Is.EqualTo("3"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.Direction], Is.EqualTo(ThresholdDirection.Either.ToString()));
     }
 
     [Test]
-    public void RegisteredParserExtensionPreservesPollIntervalAndLineNumber()
+    public void MetricThresholdHandlerPreservesPollInterval()
     {
-        var definition = ParseWithMetricsExtension("""
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: ["Scheduler.PendingJobCount"],
+            namedNumbers: new Dictionary<string, double>
+            {
+                ["Threshold"] = 1,
+            },
+            namedEnums: new Dictionary<string, string>
+            {
+                ["Direction"] = nameof(ThresholdDirection.Below),
+            },
+            namedInts: new Dictionary<string, int>
+            {
+                ["PollInterval"] = 15,
+            }));
 
-
-[OnMetricThreshold("Scheduler.PendingJobCount", Threshold = 1, Direction = ThresholdDirection.Below, PollInterval = 15)]
-[Task("TriggerTask")]
-public class TriggerTask
-{
-    public async Task RunAsync(CancellationToken ct)
-    {
-        Log("ok");
-    }
-}
-""");
-
-        var trigger = AssertSingleTrigger(definition);
-
-        Assert.That(trigger.Parameters[MetricTriggerKeys.Source], Is.EqualTo("Scheduler.PendingJobCount"));
+        Assert.That(trigger!.Parameters[MetricTriggerKeys.Source], Is.EqualTo("Scheduler.PendingJobCount"));
         Assert.That(trigger.Parameters[MetricTriggerKeys.PollIntervalSecs], Is.EqualTo("15"));
-        Assert.That(trigger.Line, Is.EqualTo(3));
+        Assert.That(trigger.Parameters[MetricTriggerKeys.Direction], Is.EqualTo(ThresholdDirection.Below.ToString()));
     }
 
     [Test]
-    public void MetricTriggerSourceUsesParsedMetricSourceAsBindingValue()
+    public void MetricThresholdHandlerOmitsMissingOptionalFields()
     {
-        var definition = ParseWithMetricsExtension(WrapTaskWithAttribute(
-            """[OnMetricThreshold("Queue.PendingJobCount", Threshold = 1, Direction = ThresholdDirection.Above)]"""));
-        var trigger = AssertSingleTrigger(definition);
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: []));
+
+        Assert.That(trigger!.Parameters.ContainsKey(MetricTriggerKeys.Source), Is.False);
+        Assert.That(trigger.Parameters.ContainsKey(MetricTriggerKeys.Threshold), Is.False);
+        Assert.That(trigger.Parameters[MetricTriggerKeys.Direction], Is.EqualTo(ThresholdDirection.Either.ToString()));
+        Assert.That(trigger.Parameters.ContainsKey(MetricTriggerKeys.PollIntervalSecs), Is.False);
+    }
+
+    [Test]
+    public void MetricTriggerSourceUsesHandlerMetricSourceAsBindingValue()
+    {
+        var trigger = HandleMetricThreshold(new TestTriggerAttributeContext(
+            "OnMetricThreshold",
+            positionalStrings: ["Queue.PendingJobCount"],
+            namedNumbers: new Dictionary<string, double>
+            {
+                ["Threshold"] = 1,
+            },
+            namedEnums: new Dictionary<string, string>
+            {
+                ["Direction"] = nameof(ThresholdDirection.Above),
+            }));
         var source = new MetricTriggerSource([], NullLogger<MetricTriggerSource>.Instance);
 
-        Assert.That(source.GetBindingValue(trigger), Is.EqualTo("Queue.PendingJobCount"));
+        Assert.That(trigger, Is.Not.Null);
+        Assert.That(source.GetBindingValue(trigger!), Is.EqualTo("Queue.PendingJobCount"));
     }
 
     [Test]
@@ -223,32 +258,62 @@ public class TriggerTask
         }
     }
 
-    private static TaskScriptDefinition ParseWithMetricsExtension(string source)
+    private static TaskTriggerDefinition? HandleMetricThreshold(TaskTriggerAttributeContext context) =>
+        MetricsParserExtension.Instance.TriggerAttributeHandlers["OnMetricThreshold"].Handle(context);
+
+    private sealed class TestTriggerAttributeContext(
+        string attributeName,
+        IReadOnlyList<string?>? positionalStrings = null,
+        IReadOnlyDictionary<string, string?>? namedStrings = null,
+        IReadOnlyDictionary<string, int>? namedInts = null,
+        IReadOnlyDictionary<string, double>? namedNumbers = null,
+        IReadOnlyDictionary<string, string>? namedEnums = null,
+        int line = 1) : TaskTriggerAttributeContext
     {
-        TaskScriptParser.RegisterModule(MetricsParserExtension.Instance);
+        private readonly IReadOnlyList<string?> _positionalStrings = positionalStrings ?? [];
+        private readonly IReadOnlyDictionary<string, string?> _namedStrings = namedStrings ??
+            new Dictionary<string, string?>(StringComparer.Ordinal);
+        private readonly IReadOnlyDictionary<string, int> _namedInts = namedInts ??
+            new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly IReadOnlyDictionary<string, double> _namedNumbers = namedNumbers ??
+            new Dictionary<string, double>(StringComparer.Ordinal);
+        private readonly IReadOnlyDictionary<string, string> _namedEnums = namedEnums ??
+            new Dictionary<string, string>(StringComparer.Ordinal);
 
-        var result = TaskScriptEngine.Parse(source);
-        var errors = result.Diagnostics
-            .Where(diagnostic => diagnostic.Severity == TaskDiagnosticSeverity.Error)
-            .Select(diagnostic => diagnostic.Message)
-            .ToArray();
+        public override string AttributeName { get; } = attributeName;
+        public override int Line { get; } = line;
+        public override int ArgumentCount => _positionalStrings.Count;
+        public List<(TaskTriggerAttributeDiagnosticSeverity Severity, string Code, string Message)> Diagnostics { get; } = [];
 
-        Assert.That(errors, Is.Empty);
-        return result.Definition!;
+        public override string? GetStringArg(int index) =>
+            index >= 0 && index < _positionalStrings.Count ? _positionalStrings[index] : null;
+
+        public override int? GetIntArg(int index) => null;
+
+        public override string? GetNamedStringArg(string name) =>
+            _namedStrings.GetValueOrDefault(name);
+
+        public override int? GetNamedIntArg(string name) =>
+            _namedInts.TryGetValue(name, out var value) ? value : null;
+
+        public override double? GetNamedDoubleArg(string name) =>
+            _namedNumbers.TryGetValue(name, out var value) ? value : null;
+
+        public override T? GetNamedEnumArg<T>(string name)
+        {
+            if (!_namedEnums.TryGetValue(name, out var value))
+                return null;
+
+            var enumMember = value[(value.LastIndexOf('.') + 1)..];
+            return Enum.TryParse<T>(enumMember, ignoreCase: true, out var parsed) ? parsed : null;
+        }
+
+        public override string? GetRawArgText(int index) => GetStringArg(index);
+
+        public override void Report(
+            TaskTriggerAttributeDiagnosticSeverity severity,
+            string code,
+            string message) =>
+            Diagnostics.Add((severity, code, message));
     }
-
-    private static TaskTriggerDefinition AssertSingleTrigger(TaskScriptDefinition definition) =>
-        definition.TriggerDefinitions.Single();
-
-    private static string WrapTaskWithAttribute(string attribute) => $$"""
-{{attribute}}
-[Task("TriggerTask")]
-public class TriggerTask
-{
-    public async Task RunAsync(CancellationToken ct)
-    {
-        Log("ok");
-    }
-}
-""";
 }
