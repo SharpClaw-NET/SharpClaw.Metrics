@@ -11,8 +11,8 @@
     <PackageTags>sharpclaw;module;metrics;tasks;triggers</PackageTags>
     <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/mkn8rn/SharpClaw.Metrics</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/mkn8rn/SharpClaw.Metrics.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/SharpClaw-NET/SharpClaw.Metrics</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/SharpClaw-NET/SharpClaw.Metrics.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
