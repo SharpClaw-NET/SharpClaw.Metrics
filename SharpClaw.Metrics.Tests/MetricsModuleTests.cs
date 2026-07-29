@@ -26,7 +26,7 @@ public sealed class MetricsModuleTests
     }
 
     [Test]
-    public void ServiceConfigurationDoesNotRegisterTaskSubsystem()
+    public void ServiceConfigurationRegistersNoServices()
     {
         var module = new MetricsModule();
         var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
