@@ -1,7 +1,7 @@
 {
   "id": "sharpclaw_metrics",
   "displayName": "Metrics",
-  "version": "0.1.1-beta.1",
+  "version": "0.1.1-beta.2",
   "toolPrefix": "metric",
   "runtime": "dotnet",
   "hostMode": "sidecar",

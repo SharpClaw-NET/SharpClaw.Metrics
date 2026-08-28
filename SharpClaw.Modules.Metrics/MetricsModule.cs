@@ -1,30 +1,30 @@
-using System.Text.Json;
-
-using Microsoft.Extensions.DependencyInjection;
-
 using SharpClaw.Contracts.Modules;
 
 namespace SharpClaw.Modules.Metrics;
 
 /// <summary>First-party SharpClaw metrics module identity and lifecycle implementation.</summary>
-public sealed class MetricsModule : ISharpClawCoreModule
+public sealed class MetricsModule : ISharpClawModule
 {
-    public string Id => "sharpclaw_metrics";
-    public string DisplayName => "Metrics";
-    public string ToolPrefix => "metric";
+    public ModuleIdentity Identity { get; } = new(
+        "sharpclaw_metrics",
+        "Metrics",
+        "metric");
 
-    public void ConfigureServices(IServiceCollection services)
+    public void Configure(ISharpClawModuleBuilder module)
     {
+        ArgumentNullException.ThrowIfNull(module);
     }
 
-    public IReadOnlyList<ModuleToolDefinition> GetToolDefinitions() => [];
+    public ValueTask StartAsync(ModuleStartContext context, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ct.ThrowIfCancellationRequested();
+        return ValueTask.CompletedTask;
+    }
 
-    public Task<string> ExecuteToolAsync(
-        string toolName,
-        JsonElement parameters,
-        AgentJobContext job,
-        IServiceProvider scopedServices,
-        CancellationToken ct) =>
-        throw new InvalidOperationException(
-            $"Metrics module has no tools. Unknown: '{toolName}'.");
+    public ValueTask StopAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        return ValueTask.CompletedTask;
+    }
 }
