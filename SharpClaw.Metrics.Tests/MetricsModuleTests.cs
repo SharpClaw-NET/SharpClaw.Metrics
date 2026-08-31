@@ -20,7 +20,7 @@ public sealed class MetricsModuleTests
         Assert.That(module.Identity.DisplayName, Is.EqualTo("Metrics"));
         Assert.That(module.Identity.ToolPrefix, Is.EqualTo("metric"));
         Assert.That(root.GetProperty("id").GetString(), Is.EqualTo(module.Identity.Id));
-        Assert.That(root.GetProperty("version").GetString(), Is.EqualTo("0.1.1-beta.3"));
+        Assert.That(root.GetProperty("version").GetString(), Is.EqualTo("0.1.1-beta.4"));
         Assert.That(root.GetProperty("entryAssembly").GetString(), Is.EqualTo("SharpClaw.Modules.Metrics.dll"));
         Assert.That(root.GetProperty("moduleType").GetString(), Is.EqualTo(typeof(MetricsModule).FullName));
         Assert.That(root.GetProperty("runtime").GetString(), Is.EqualTo(ModuleManifestRuntimeInfo.DotNet));
