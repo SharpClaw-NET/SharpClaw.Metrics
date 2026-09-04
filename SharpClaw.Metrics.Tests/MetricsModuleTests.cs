@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-using SharpClaw.Contracts.Modules;
+using SharpClaw.Contracts.Kernel;
 using SharpClaw.ModuleSDK;
 using SharpClaw.Modules.Metrics;
 
@@ -13,7 +13,7 @@ public sealed class MetricsModuleTests
     {
         var module = new MetricsModule();
         using var document = JsonDocument.Parse(File.ReadAllText(
-            Path.Combine(TestContext.CurrentContext.TestDirectory, "module.json")));
+            Path.Combine(TestContext.CurrentContext.TestDirectory, "package.json")));
         var root = document.RootElement;
 
         Assert.That(module.Identity.Id, Is.EqualTo("sharpclaw_metrics"));
@@ -22,9 +22,9 @@ public sealed class MetricsModuleTests
         Assert.That(root.GetProperty("id").GetString(), Is.EqualTo(module.Identity.Id));
         Assert.That(root.GetProperty("version").GetString(), Is.EqualTo("0.5.0-beta.4"));
         Assert.That(root.GetProperty("entryAssembly").GetString(), Is.EqualTo("SharpClaw.Modules.Metrics.dll"));
-        Assert.That(root.GetProperty("moduleType").GetString(), Is.EqualTo(typeof(MetricsModule).FullName));
-        Assert.That(root.GetProperty("runtime").GetString(), Is.EqualTo(ModuleManifestRuntimeInfo.DotNet));
-        Assert.That(root.GetProperty("hostMode").GetString(), Is.EqualTo(ModuleManifestRuntimeInfo.HostModeSidecar));
+        Assert.That(root.GetProperty("entryType").GetString(), Is.EqualTo(typeof(MetricsModule).FullName));
+        Assert.That(root.GetProperty("runtime").GetString(), Is.EqualTo(PackageRuntimeInfo.DotNet));
+        Assert.That(root.GetProperty("hostMode").GetString(), Is.EqualTo(PackageRuntimeInfo.HostModeSidecar));
         Assert.That(root.GetProperty("defaultEnabled").GetBoolean(), Is.True);
     }
 
@@ -32,10 +32,10 @@ public sealed class MetricsModuleTests
     public void ModuleCompilerBuildsEmptyOutOfProcessContributionGraph()
     {
         var module = new MetricsModule();
-        var manifest = JsonSerializer.Deserialize<ModuleManifest>(
+        var manifest = JsonSerializer.Deserialize<PackageManifest>(
             File.ReadAllText(Path.Combine(
                 TestContext.CurrentContext.TestDirectory,
-                "module.json")),
+                "package.json")),
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         var graph = SharpClawModuleCompiler.Compile(
             module,
@@ -64,8 +64,7 @@ public sealed class MetricsModuleTests
     public async Task LifecycleHonorsCancellationWithoutAddingContributions()
     {
         var module = new MetricsModule();
-        var context = new ModuleStartContext(
-            module.Identity,
+        var context = new ServiceStartContext(
             "0.5.0-beta.37",
             "metrics-test-contract",
             ExtensionFeatureSet.Empty);

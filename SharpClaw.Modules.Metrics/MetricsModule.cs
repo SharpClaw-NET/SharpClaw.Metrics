@@ -1,4 +1,6 @@
-using SharpClaw.Contracts.Modules;
+using Microsoft.Extensions.DependencyInjection;
+using SharpClaw.Contracts.Kernel;
+using SharpClaw.ModuleSDK;
 
 namespace SharpClaw.Modules.Metrics;
 
@@ -10,12 +12,12 @@ public sealed class MetricsModule : ISharpClawModule
         "Metrics",
         "metric");
 
-    public void Configure(ISharpClawModuleBuilder module)
+    public void ConfigureServices(IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(module);
+        ArgumentNullException.ThrowIfNull(services);
     }
 
-    public ValueTask StartAsync(ModuleStartContext context, CancellationToken ct)
+    public ValueTask StartAsync(ServiceStartContext context, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(context);
         ct.ThrowIfCancellationRequested();

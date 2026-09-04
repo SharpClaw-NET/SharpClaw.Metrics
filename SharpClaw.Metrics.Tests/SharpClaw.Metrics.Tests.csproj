@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\SharpClaw.Modules.Metrics\module.json"
-          Link="module.json"
+    <None Include="..\SharpClaw.Modules.Metrics\package.json"
+          Link="package.json"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

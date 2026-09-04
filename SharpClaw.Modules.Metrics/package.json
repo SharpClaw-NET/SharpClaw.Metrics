@@ -6,7 +6,7 @@
   "runtime": "dotnet",
   "hostMode": "sidecar",
   "entryAssembly": "SharpClaw.Modules.Metrics.dll",
-  "moduleType": "SharpClaw.Modules.Metrics.MetricsModule",
+  "entryType": "SharpClaw.Modules.Metrics.MetricsModule",
   "minHostVersion": "0.1.0-beta",
   "author": "mkn8rn",
   "description": "Provides the SharpClaw Metrics module identity and host-side metrics integration.",
