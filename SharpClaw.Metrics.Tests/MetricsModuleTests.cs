@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using SharpClaw.Contracts.Kernel;
 using SharpClaw.ModuleSDK;
+using SharpClaw.ModuleSDK.Testing;
 using SharpClaw.Modules.Metrics;
 
 namespace SharpClaw.Metrics.Tests;
@@ -29,21 +30,16 @@ public sealed class MetricsModuleTests
     }
 
     [Test]
-    public void ModuleCompilerBuildsEmptyOutOfProcessContributionGraph()
+    public async Task SharedTestHostBuildsEmptyOutOfProcessGraphAndRunsLifecycle()
     {
         var module = new MetricsModule();
-        var manifest = JsonSerializer.Deserialize<PackageManifest>(
-            File.ReadAllText(Path.Combine(
-                TestContext.CurrentContext.TestDirectory,
-                "package.json")),
-            new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-        var graph = SharpClawModuleCompiler.Compile(
-            module,
-            manifest,
-            new ModuleCompilationOptions
-            {
-                HostingMode = ModuleHostingMode.OutOfProcess,
-            });
+        var manifestPath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "package.json");
+        await using var host = new SharpClawModuleTestBuilder()
+            .AddRegistration(module, manifestPath)
+            .Build();
+        var graph = host.ModuleGraphs.Single();
 
         Assert.That(graph.Identity, Is.EqualTo(module.Identity));
         Assert.That(graph.HostingMode, Is.EqualTo(ModuleHostingMode.OutOfProcess));
@@ -58,6 +54,18 @@ public sealed class MetricsModuleTests
         Assert.That(graph.ActionEntries, Is.Empty);
         Assert.That(graph.Chat.ContextContributors, Is.Empty);
         Assert.That(graph.Application.IsEmpty, Is.True);
+
+        await host.StartAsync();
+        await host.StopAsync();
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Assert.That(
+            async () => await host.StartAsync(ct: cancellation.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+
+        await host.StartAsync();
+        await host.StopAsync();
     }
 
     [Test]
